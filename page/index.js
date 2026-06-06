@@ -59,7 +59,7 @@ function releaseScreen() {
   resetDropWristScreenOff();
 }
 
-function vibrateWarning() {
+function vibrateWarning(maxcount = 10) {
   if (!vibrator) {
     vibrator = new Vibrator();
   }
@@ -75,7 +75,7 @@ function vibrateWarning() {
 
     count += 1;
 
-    if (count >= 10) {
+    if (count >= maxcount) {
       clearInterval(pulse);
       vibrator.stop();
     }
@@ -130,8 +130,10 @@ function clearDisplayLoop() {
 }
 
 function stopTimer() {
+  const remainingNow = getRemaining();
+
   if (state.running) {
-    state.pausedRemaining = getRemaining();
+    state.pausedRemaining = remainingNow;
     state.running = false;
     state.startedAt = null;
   }
@@ -146,13 +148,15 @@ function finishTimer() {
   state.running = false;
   state.startedAt = null;
   state.pausedRemaining = 0;
+  state.warned15 = false;
 
   clearDisplayLoop();
-  releaseScreen();
-  updateDisplay();
+
   updateLabel("TIME");
+  updateDisplay();
+
   saveState();
-  vibrateWarning();
+  vibrateWarning(3);
 }
 
 function setTimer(seconds, label) {
@@ -269,26 +273,34 @@ Page({
       text: formatTime(getRemaining()),
     });
 
-    makeButton(30, 180, 150, 55, "START", startTimer);
-    makeButton(210, 180, 150, 55, "PAUSE", stopTimer);
+   makeButton(30, 180, 150, 55, "PAUSE", function () {
+  if (state.running) {
+    stopTimer();
+  } else {
+    startTimer();
+  }
+});
+makeButton(210, 180, 150, 55, "RESET", resetTimer);
 
-    makeButton(30, 250, 150, 55, "RESET", resetTimer);
+makeButton(30, 250, 150, 55, "1 MIN", function () {
+  setTimer(60, "1 MIN TIMEOUT");
+  startTimer();
+});
 
-    makeButton(210, 250, 150, 55, "10 MIN", function () {
-      startPreset(600, "10 MIN TIMEOUT");
-    });
+makeButton(210, 250, 150, 55, "2 MIN", function () {
+  setTimer(120, "2 MIN C ENDS");
+  startTimer();
+});
 
-    makeButton(30, 320, 150, 55, "1 MIN", function () {
-      startPreset(60, "1 MIN TIMEOUT");
-    });
+makeButton(30, 320, 150, 55, "10 MIN", function () {
+  setTimer(600, "10 MIN TIMEOUT");
+  startTimer();
+});
 
-    makeButton(210, 320, 150, 55, "2 MIN", function () {
-      startPreset(120, "2 MIN BREAK");
-    });
-
-    makeButton(30, 390, 330, 45, "15 MIN MEDICAL", function () {
-      startPreset(900, "MEDICAL TIMEOUT");
-    });
+makeButton(210, 320, 150, 55, "15 MIN", function () {
+  setTimer(900, "MEDICAL TIMEOUT");
+  startTimer();
+});
 
     if (state.running) {
       keepScreenOn();
