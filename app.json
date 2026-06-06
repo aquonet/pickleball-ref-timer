@@ -1,0 +1,55 @@
+{
+  "configVersion": "v2",
+  "app": {
+    "appId": 20000,
+    "appName": "PEPE",
+    "appType": "app",
+   "version": {
+    "code": 4,
+    "name": "1.0.5"
+  },
+    "icon": "icon.png",
+    "vender": "zepp",
+    "description": "empty app"
+  },
+  "permissions": [],
+  "runtime": {
+    "apiVersion": {
+      "compatible": "1.0.0",
+      "target": "1.0.1",
+      "minVersion": "1.0.0"
+    }
+  },
+  "targets": {
+    "390x450-amazfit-bip-6": {
+      "module": {
+        "page": {
+          "pages": [
+            "page/index"
+          ]
+        }
+      },
+      "platforms": [
+        {
+          "name": "Pamir",
+          "deviceSource": 9765120
+        },
+        {
+          "name": "PamirW",
+          "deviceSource": 9765121
+        },
+        {
+          "name": "PamirW64",
+          "deviceSource": 10158337
+        }
+      ],
+      "designWidth": 390
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "appName": "Pickleball Ref Timer"
+    }
+  },
+  "defaultLanguage": "en-US"
+}
