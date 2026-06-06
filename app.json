@@ -2,7 +2,7 @@
   "configVersion": "v2",
   "app": {
     "appId": 20000,
-    "appName": "PEPE",
+    "appName": "Pickleball Ref Timer",
     "appType": "app",
    "version": {
     "code": 4,

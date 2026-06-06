@@ -7,6 +7,8 @@ import {
   setWakeUpRelaunch,
   pauseDropWristScreenOff,
   resetDropWristScreenOff,
+  pausePalmScreenOff,
+  resetPalmScreenOff,
 } from "@zos/display";
 
 const STATE_KEY = "pickleball_timer_state";
@@ -16,8 +18,6 @@ const SCREEN_TIME_MS = 10 * 60 * 1000;
 let timeText = null;
 let labelText = null;
 let intervalId = null;
-let lastRemaining = null;
-let vibrator = null;
 
 let state = {
   running: false,
@@ -49,21 +49,39 @@ function loadState() {
 }
 
 function keepScreenOn() {
-  setPageBrightTime({ brightTime: SCREEN_TIME_MS });
-  pauseDropWristScreenOff({ duration: SCREEN_TIME_MS });
-  setWakeUpRelaunch({ relaunch: true });
+  try {
+    setPageBrightTime({ brightTime: SCREEN_TIME_MS });
+  } catch (e) {}
+
+  try {
+    pauseDropWristScreenOff({ duration: 0 });
+  } catch (e) {}
+
+  try {
+    pausePalmScreenOff({ duration: 0 });
+  } catch (e) {}
+
+  try {
+    setWakeUpRelaunch({ relaunch: true });
+  } catch (e) {}
 }
 
 function releaseScreen() {
-  resetPageBrightTime();
-  resetDropWristScreenOff();
+  try {
+    resetPageBrightTime();
+  } catch (e) {}
+
+  try {
+    resetDropWristScreenOff();
+  } catch (e) {}
+
+  try {
+    resetPalmScreenOff();
+  } catch (e) {}
 }
 
-function vibrateWarning(maxcount = 10) {
-  if (!vibrator) {
-    vibrator = new Vibrator();
-  }
-
+function vibratePattern(maxCount = 10) {
+  const vibrator = new Vibrator();
   let count = 0;
 
   const pulse = setInterval(function () {
@@ -75,7 +93,7 @@ function vibrateWarning(maxcount = 10) {
 
     count += 1;
 
-    if (count >= maxcount) {
+    if (count >= maxCount) {
       clearInterval(pulse);
       vibrator.stop();
     }
@@ -154,22 +172,13 @@ function finishTimer() {
 
   updateLabel("TIME");
   updateDisplay();
-
   saveState();
-  vibrateWarning(3);
-}
 
-function setTimer(seconds, label) {
-  stopTimer();
+  vibratePattern(3);
 
-  state.pausedRemaining = seconds;
-  state.running = false;
-  state.startedAt = null;
-  state.warned15 = false;
-
-  updateLabel(label);
-  updateDisplay();
-  saveState();
+  setTimeout(function () {
+    releaseScreen();
+  }, 4000);
 }
 
 function startDisplayLoop() {
@@ -177,29 +186,25 @@ function startDisplayLoop() {
     return;
   }
 
-  lastRemaining = getRemaining();
-
   intervalId = setInterval(function () {
     const remaining = getRemaining();
 
     updateDisplay();
 
     if (
+      state.running &&
       !state.warned15 &&
-      lastRemaining > WARNING_TIME &&
-      remaining <= WARNING_TIME
+      remaining <= WARNING_TIME &&
+      remaining > 0
     ) {
       state.warned15 = true;
       saveState();
-      vibrateWarning();
+      vibratePattern(10);
     }
 
-    if (remaining <= 0 && state.running) {
+    if (state.running && remaining <= 0) {
       finishTimer();
-      return;
     }
-
-    lastRemaining = remaining;
   }, 1000);
 }
 
@@ -221,12 +226,38 @@ function startTimer() {
 }
 
 function startPreset(seconds, label) {
-  setTimer(seconds, label);
-  startTimer();
+  resetTimer();
+
+  state.pausedRemaining = seconds;
+  updateLabel(label);
+  updateDisplay();
+  saveState();
+
+  setTimeout(function () {
+    startTimer();
+  }, 100);
 }
 
 function resetTimer() {
-  setTimer(60, "1 MIN TIMEOUT");
+  clearDisplayLoop();
+  releaseScreen();
+
+  state.running = false;
+  state.startedAt = null;
+  state.pausedRemaining = 60;
+  state.warned15 = false;
+
+  updateLabel("1 MIN TIMEOUT");
+  updateDisplay();
+  saveState();
+}
+
+function togglePauseResume() {
+  if (state.running) {
+    stopTimer();
+  } else {
+    startTimer();
+  }
 }
 
 function makeButton(x, y, w, h, text, clickFunc) {
@@ -273,34 +304,24 @@ Page({
       text: formatTime(getRemaining()),
     });
 
-   makeButton(30, 180, 150, 55, "PAUSE", function () {
-  if (state.running) {
-    stopTimer();
-  } else {
-    startTimer();
-  }
-});
-makeButton(210, 180, 150, 55, "RESET", resetTimer);
+    makeButton(30, 180, 150, 55, "PAUSE", togglePauseResume);
+    makeButton(210, 180, 150, 55, "RESET", resetTimer);
 
-makeButton(30, 250, 150, 55, "1 MIN", function () {
-  setTimer(60, "1 MIN TIMEOUT");
-  startTimer();
-});
+    makeButton(30, 250, 150, 55, "1 MIN", function () {
+      startPreset(60, "1 MIN TIMEOUT");
+    });
 
-makeButton(210, 250, 150, 55, "2 MIN", function () {
-  setTimer(120, "2 MIN C ENDS");
-  startTimer();
-});
+    makeButton(210, 250, 150, 55, "2 MIN", function () {
+      startPreset(120, "2 MIN C ENDS");
+    });
 
-makeButton(30, 320, 150, 55, "10 MIN", function () {
-  setTimer(600, "10 MIN TIMEOUT");
-  startTimer();
-});
+    makeButton(30, 320, 150, 55, "10 MIN", function () {
+      startPreset(600, "10 MIN TIMEOUT");
+    });
 
-makeButton(210, 320, 150, 55, "15 MIN", function () {
-  setTimer(900, "MEDICAL TIMEOUT");
-  startTimer();
-});
+    makeButton(210, 320, 150, 55, "15 MIN", function () {
+      startPreset(900, "MEDICAL TIMEOUT");
+    });
 
     if (state.running) {
       keepScreenOn();
@@ -309,8 +330,11 @@ makeButton(210, 320, 150, 55, "15 MIN", function () {
   },
 
   onDestroy() {
-    clearDisplayLoop();
     saveState();
-    releaseScreen();
+
+    if (!state.running) {
+      clearDisplayLoop();
+      releaseScreen();
+    }
   },
 });
