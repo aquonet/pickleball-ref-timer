@@ -1,4 +1,5 @@
-// Simple timer app (restored working version)
+// Simple timer app - Amazfit Bip 6
+// Fix: onHide relaunches the app when OS tries to dismiss it
 
 let remaining = 60;
 let running = false;
@@ -9,17 +10,13 @@ let labelText = null;
 function vibrateTwoSeconds() {
   const vibrate = hmSensor.createSensor(hmSensor.id.VIBRATE);
   let count = 0;
-
   const pulse = setInterval(function () {
     vibrate.scene = 27;
     vibrate.start();
-
     setTimeout(function () {
       vibrate.stop();
     }, 250);
-
     count += 1;
-
     if (count >= 10) {
       clearInterval(pulse);
       vibrate.stop();
@@ -47,7 +44,6 @@ function updateLabel(text) {
 
 function stopTimer() {
   running = false;
-
   if (intervalId !== null) {
     clearInterval(intervalId);
     intervalId = null;
@@ -61,22 +57,17 @@ function setTimer(seconds, label) {
   updateDisplay();
 }
 
-
 function startTimer() {
   if (running) return;
-
   running = true;
-
   intervalId = setInterval(function () {
     if (remaining > 0) {
       remaining -= 1;
       updateDisplay();
-
       if (remaining === 45) {
         vibrateTwoSeconds();
       }
     }
-
     if (remaining <= 0) {
       stopTimer();
       updateLabel("TIME");
@@ -134,23 +125,24 @@ Page({
 
     makeButton(30, 180, 150, 55, "START", startTimer);
     makeButton(210, 180, 150, 55, "PAUSE", stopTimer);
-
     makeButton(30, 250, 150, 55, "RESET", resetTimer);
     makeButton(210, 250, 150, 55, "15 SEC", function () {
       setTimer(15, "15 SEC WARNING");
     });
-
     makeButton(30, 320, 150, 55, "1 MIN", function () {
       setTimer(60, "1 MIN TIMEOUT");
       startTimer();
     });
-
     makeButton(210, 320, 150, 55, "2 MIN", function () {
       setTimer(120, "2 MIN BREAK");
     });
-
     makeButton(30, 390, 330, 45, "15 MIN MEDICAL", function () {
       setTimer(900, "MEDICAL TIMEOUT");
     });
+  },
+
+  onHide() {
+    // OS is trying to dismiss the app — jump back immediately
+    hmApp.gotoPage({ url: "page/index" });
   }
 });
